@@ -55,7 +55,7 @@ Replace `C:\\Path\\To\\arxiv-insight-mcp` with the absolute path to your project
       "command": "uv",
       "args": [
         "--directory",
-        "C:\\Path\\To\\arxiv-insight-mcp",
+        "C:\\Path\\To\\ArXiv-Insight-MCP-Server",
         "run",
         "main.py"
       ]
