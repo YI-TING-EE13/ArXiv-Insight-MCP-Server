@@ -22,7 +22,7 @@ An intelligent Model Context Protocol (MCP) server that empowers LLMs to search,
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/YI-TING-EE13/ArXiv-Insight-MCP-Server.git
-   cd arxiv-insight-mcp
+   cd ArXiv-Insight-MCP-Server
    ```
 
 2. **Install dependencies:**
