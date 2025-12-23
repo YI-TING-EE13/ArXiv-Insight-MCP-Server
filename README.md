@@ -6,10 +6,11 @@ An intelligent Model Context Protocol (MCP) server that empowers LLMs to search,
 
 - **🔍 Smart Search**: Search arXiv papers by topic with optional category filtering (e.g., `cs.AI`, `cs.CV`).
 - **📖 Full Text Access**: Retrieve optimized full text of papers. Includes local caching for 10x speedup on repeat access.
-- **📥 PDF Download**: Download original PDF files to your local machine.
+- **📥 PDF Download**: Download original PDF files to your local machine. **Securely restricted** to the project's download directory.
 - **📝 BibTeX Generation**: Generate standard BibTeX citations for your papers.
 - **✂️ Section Extraction**: Smartly extract specific sections like "Introduction", "Methodology", or "Conclusion".
 - **🔗 Reference Discovery**: Automatically detects and links other arXiv papers referenced in the text.
+- **🛡️ Robust & Secure**: Implements rate limiting, path traversal protection, and persistent search history.
 
 ## Prerequisites
 
@@ -86,3 +87,4 @@ Replace `C:\\Path\\To\\arxiv-insight-mcp` with the absolute path to your project
 - `arxiv_insight.py`: Main MCP server implementation.
 - `paper_cache/`: Directory where parsed paper texts are cached (ignored by git).
 - `downloads/`: Default directory for downloaded PDFs (ignored by git).
+- `metadata_db.json`: Persistent storage for search history and rate limiting state (ignored by git).
