@@ -15,4 +15,4 @@ paper_cache/
 downloads/
 Log.txt
 test_arxiv_query.py
-
+metadata_db.json
