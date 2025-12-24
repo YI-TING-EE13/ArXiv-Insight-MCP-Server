@@ -113,7 +113,7 @@ def _sync_search_arxiv(query: str, max_results: int, offset: int, sort_by: str) 
             "published": paper.published.strftime("%Y-%m-%d"),
             "summary": paper.summary[:200] + "..." if len(paper.summary) > 200 else paper.summary,
             "pdf_url": paper.pdf_url,
-            "category": paper.primary_category
+            "category": paper.primary_category or ""
         })
     return results
 
@@ -149,8 +149,8 @@ async def search_arxiv(
     offset: int = 0, 
     category: str = "",
     sort_by: str = "relevance",
-    start_year: Optional[int] = None,
-    end_year: Optional[int] = None
+    start_year: int = 0,
+    end_year: int = 0
 ) -> str:
     """
     Search for papers on arXiv and cache metadata for Resources.
@@ -161,8 +161,8 @@ async def search_arxiv(
         offset: The index of the first result to return (for pagination).
         category: Optional category filter (e.g., 'cs.AI').
         sort_by: Sort order. Options: 'relevance' (default), 'submitted', 'updated'.
-        start_year: Filter by submission year (start).
-        end_year: Filter by submission year (end).
+        start_year: Filter by submission year (start). Set to 0 to ignore.
+        end_year: Filter by submission year (end). Set to 0 to ignore.
     """
     sys.stderr.write(f"DEBUG: search_arxiv called with topic='{topic}', category='{category}', offset={offset}, sort_by='{sort_by}', years={start_year}-{end_year}\n")
     
@@ -170,15 +170,15 @@ async def search_arxiv(
     if category:
         query_parts.append(f"cat:{category}")
     
-    if start_year:
+    if start_year and start_year > 0:
         # Format: submittedDate:[YYYYMMDDHHMM TO YYYYMMDDHHMM]
         # We use broad range for the year
         start_date = f"{start_year}01010000"
-        end_date = f"{end_year}12312359" if end_year else f"{start_year}12312359"
+        end_date = f"{end_year}12312359" if end_year and end_year > 0 else f"{start_year}12312359"
         # If end_year is not provided but start_year is, assume just that year? 
         # Or if user wants "since 2020", they should provide end_year=2025 (current).
         # Let's assume if end_year is missing, it means "from start_year until now".
-        if not end_year:
+        if not end_year or end_year == 0:
              # Use a far future date or current year. Let's use 2099 to be safe for "until now"
              end_date = "209912312359"
         
