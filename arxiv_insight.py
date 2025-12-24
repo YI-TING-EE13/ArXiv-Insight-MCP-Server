@@ -166,7 +166,26 @@ async def search_arxiv(
     """
     sys.stderr.write(f"DEBUG: search_arxiv called with topic='{topic}', category='{category}', offset={offset}, sort_by='{sort_by}', years={start_year}-{end_year}\n")
     
-    query_parts = [topic]
+    # Heuristic: If topic is a simple list of words, join with AND to enforce all keywords.
+    # Also wrap in parentheses to ensure it groups correctly against other filters.
+    
+    # Check if topic contains special operators
+    special_chars = ["AND", "OR", "NOT", "(", ")", ":", '"']
+    is_simple_query = not any(char in topic for char in special_chars)
+    
+    if is_simple_query:
+        # Replace spaces with AND to enforce all keywords
+        terms = topic.split()
+        if len(terms) > 1:
+            topic_query = " AND ".join(terms)
+            topic_part = f"({topic_query})"
+        else:
+            topic_part = topic
+    else:
+        # Just wrap in parentheses for safety
+        topic_part = f"({topic})"
+
+    query_parts = [topic_part]
     if category:
         query_parts.append(f"cat:{category}")
     
