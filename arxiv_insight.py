@@ -87,18 +87,34 @@ def optimize_markdown(text: str) -> str:
     
     return text
 
-def _sync_search_arxiv(query: str, max_results: int) -> List[Dict[str, Any]]:
+def _sync_search_arxiv(query: str, max_results: int, offset: int, sort_by: str) -> List[Dict[str, Any]]:
     """Synchronous arXiv search to be run in a thread."""
+    
+    # Map sort_by string to arxiv.SortCriterion
+    criterion = arxiv.SortCriterion.Relevance
+    if sort_by == "submitted":
+        criterion = arxiv.SortCriterion.SubmittedDate
+    elif sort_by == "updated":
+        criterion = arxiv.SortCriterion.LastUpdatedDate
+        
     # Use shared client
-    search = arxiv.Search(query=query, max_results=max_results, sort_by=arxiv.SortCriterion.Relevance)
+    search = arxiv.Search(
+        query=query, 
+        max_results=max_results, 
+        offset=offset,
+        sort_by=criterion
+    )
     
     results = []
     for paper in state.arxiv_client.results(search):
         results.append({
             "id": paper.get_short_id(),
             "title": paper.title,
+            "authors": [a.name for a in paper.authors],
+            "published": paper.published.strftime("%Y-%m-%d"),
             "summary": paper.summary[:200] + "..." if len(paper.summary) > 200 else paper.summary,
-            "pdf_url": paper.pdf_url
+            "pdf_url": paper.pdf_url,
+            "category": paper.primary_category
         })
     return results
 
@@ -128,11 +144,24 @@ def _sync_get_bibtex(paper_id: str) -> str:
 # --- Tools ---
 
 @mcp.tool()
-async def search_arxiv(topic: str, max_results: int = 3, category: str = "") -> str:
+async def search_arxiv(
+    topic: str, 
+    max_results: int = 5, 
+    offset: int = 0, 
+    category: str = "",
+    sort_by: str = "relevance"
+) -> str:
     """
     Search for papers on arXiv and cache metadata for Resources.
+    
+    Args:
+        topic: The search query. Supports advanced prefixes like 'ti:' (title), 'au:' (author), 'abs:' (abstract).
+        max_results: Maximum number of results to return (default: 5).
+        offset: The index of the first result to return (for pagination).
+        category: Optional category filter (e.g., 'cs.AI').
+        sort_by: Sort order. Options: 'relevance' (default), 'submitted', 'updated'.
     """
-    sys.stderr.write(f"DEBUG: search_arxiv called with topic='{topic}', category='{category}'\n")
+    sys.stderr.write(f"DEBUG: search_arxiv called with topic='{topic}', category='{category}', offset={offset}, sort_by='{sort_by}'\n")
     
     query = topic
     if category:
@@ -143,7 +172,7 @@ async def search_arxiv(topic: str, max_results: int = 3, category: str = "") -> 
     
     # Run blocking arXiv call in a separate thread
     try:
-        results = await asyncio.to_thread(_sync_search_arxiv, query, max_results)
+        results = await asyncio.to_thread(_sync_search_arxiv, query, max_results, offset, sort_by)
         
         # Update state and persist
         state.resources["recent_searches"] = results
