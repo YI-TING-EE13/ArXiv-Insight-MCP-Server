@@ -70,7 +70,7 @@ Replace `C:\\Path\\To\\arxiv-insight-mcp` with the absolute path to your project
 
 | Tool | Description |
 |------|-------------|
-| `search_arxiv` | Search for papers. Arguments: `topic`, `max_results` (max 300), `offset`, `category`, `sort_by`. |
+| `search_arxiv` | Search for papers. Arguments: `topic`, `max_results` (max 300), `offset`, `category`, `sort_by`, `start_year`, `end_year`. |
 | `get_paper_fulltext` | Get the full text content of a paper. |
 | `download_pdf` | Download the PDF file. Arguments: `paper_id`, `save_dir`. |
 | `get_bibtex` | Get the BibTeX citation string. |
