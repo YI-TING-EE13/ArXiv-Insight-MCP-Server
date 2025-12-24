@@ -146,7 +146,7 @@ def _sync_get_bibtex(paper_id: str) -> str:
 @mcp.tool()
 async def search_arxiv(
     topic: str, 
-    max_results: int = 5, 
+    max_results: int = 100, 
     offset: int = 0, 
     category: str = "",
     sort_by: str = "relevance"
@@ -156,7 +156,7 @@ async def search_arxiv(
     
     Args:
         topic: The search query. Supports advanced prefixes like 'ti:' (title), 'au:' (author), 'abs:' (abstract).
-        max_results: Maximum number of results to return (default: 5).
+        max_results: Maximum number of results to return (default: 100, max: 300).
         offset: The index of the first result to return (for pagination).
         category: Optional category filter (e.g., 'cs.AI').
         sort_by: Sort order. Options: 'relevance' (default), 'submitted', 'updated'.
@@ -166,6 +166,11 @@ async def search_arxiv(
     query = topic
     if category:
         query = f"{topic} AND cat:{category}"
+    
+    # Enforce safety limit
+    if max_results > 300:
+        sys.stderr.write(f"Warning: max_results {max_results} exceeds limit. Capping at 300.\n")
+        max_results = 300
     
     # Rate limiting
     await state.wait_for_rate_limit()
