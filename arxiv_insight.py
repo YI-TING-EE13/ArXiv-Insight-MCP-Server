@@ -101,12 +101,11 @@ def _sync_search_arxiv(query: str, max_results: int, offset: int, sort_by: str) 
     search = arxiv.Search(
         query=query, 
         max_results=max_results, 
-        offset=offset,
         sort_by=criterion
     )
     
     results = []
-    for paper in state.arxiv_client.results(search):
+    for paper in state.arxiv_client.results(search, offset=offset):
         results.append({
             "id": paper.get_short_id(),
             "title": paper.title,
