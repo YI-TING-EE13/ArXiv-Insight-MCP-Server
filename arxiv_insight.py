@@ -12,6 +12,7 @@ import arxiv
 import fitz  # PyMuPDF
 import httpx
 from mcp.server.fastmcp import FastMCP, Context
+from mcp.types import SamplingMessage, TextContent
 
 # --- Configuration & Setup ---
 
@@ -233,7 +234,17 @@ async def get_paper_fulltext(ctx: Context, paper_id: str) -> str:
                 f"Paper Content (Truncated):\n{final_content[:50000]}"
             )
             try:
-                final_content = await ctx.create_message(summary_request)
+                # Use ctx.session.create_message with correct types for Sampling
+                result = await ctx.session.create_message(
+                    messages=[
+                        SamplingMessage(
+                            role="user",
+                            content=TextContent(type="text", text=summary_request)
+                        )
+                    ],
+                    max_tokens=2000
+                )
+                final_content = result.content.text
             except Exception as e:
                 sys.stderr.write(f"Sampling failed, falling back to truncation: {e}\n")
                 final_content = final_content[:15000] + "\n\n[Content truncated due to length and sampling failure]"
