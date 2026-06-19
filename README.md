@@ -1,90 +1,102 @@
 # ArXiv Insight MCP Server
 
-An intelligent Model Context Protocol (MCP) server that empowers LLMs to search, read, analyze, and manage academic papers from arXiv.
+An MCP server for academic-paper demos. It exposes arXiv search, citation,
+PDF/text retrieval, a recent-search resource, and reusable review prompts.
 
-## Features
+## What It Provides
 
-- **🔍 Smart Search**: Search arXiv papers by topic with optional category filtering (e.g., `cs.AI`, `cs.CV`).
-- **📖 Full Text Access**: Retrieve optimized full text of papers. Includes local caching for 10x speedup on repeat access.
-- **📥 PDF Download**: Download original PDF files to your local machine. **Securely restricted** to the project's download directory.
-- **📝 BibTeX Generation**: Generate standard BibTeX citations for your papers.
-- **✂️ Section Extraction**: Smartly extract specific sections like "Introduction", "Methodology", or "Conclusion".
-- **🔗 Reference Discovery**: Automatically detects and links other arXiv papers referenced in the text.
-- **🛡️ Robust & Secure**: Implements rate limiting, path traversal protection, and persistent search history.
+Tools:
 
-## Prerequisites
+- `health_check`: local health and cache status, no network required.
+- `search_arxiv`: search arXiv by topic, category, sort order, year range, and offset.
+- `get_paper_fulltext`: download and extract paper text, using local cache.
+- `download_pdf`: download a PDF into the local `downloads/` directory only.
+- `get_bibtex`: generate BibTeX for an arXiv paper ID.
+- `extract_section`: extract a named section from a cached or downloaded paper.
 
-- **Python 3.12+**
-- **[uv](https://github.com/astral-sh/uv)** (Recommended for dependency management)
+Resources:
 
-## Installation
+- `papers://recent`: IDs and titles from the most recent `search_arxiv` result.
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/YI-TING-EE13/ArXiv-Insight-MCP-Server.git
-   cd ArXiv-Insight-MCP-Server
-   ```
+Prompts:
 
-2. **Install dependencies:**
-   ```bash
-   uv sync
-   ```
+- `review_paper`: standard review workflow for one paper.
+- `compare_papers`: comparison workflow for multiple papers.
 
-## Usage
+## Requirements
 
-### Running the Server
+- Python 3.12+
+- `uv`
+- Network access to arXiv for search, PDF, and BibTeX tools
 
-You can run the server directly using `uv`:
+The project currently uses MCP Python SDK v1.x through `mcp[cli]>=1.25.0`.
+Before refreshing dependencies, consider adding a `<2` upper bound while SDK v2
+remains a separate pre-release line.
 
-```bash
+## Install
+
+```powershell
+uv sync --frozen
+```
+
+## Run
+
+```powershell
 uv run main.py
 ```
 
-### Configuring with MCP Clients (e.g., Claude Desktop, LM Studio)
+The server uses stdio transport by default, which is the expected mode for local
+MCP clients.
 
-To use this server with an MCP client, you need to add it to your client's configuration file (e.g., `claude_desktop_config.json` or LM Studio's MCP settings).
+## MCP Client Configuration
 
-**Configuration Example (JSON):**
-
-Replace `C:\\Path\\To\\arxiv-insight-mcp` with the absolute path to your project directory.
+From the sibling `mcp-client` or `chainlit-mcp-client` repo, use:
 
 ```json
 {
   "mcpServers": {
     "arxiv-insight": {
       "command": "uv",
-      "args": [
-        "--directory",
-        "C:\\Path\\To\\ArXiv-Insight-MCP-Server",
-        "run",
-        "main.py"
-      ]
+      "args": ["--directory", "../mcp-server", "run", "main.py"]
     }
   }
 }
 ```
 
-**Note for Windows Users:** Ensure you use double backslashes `\\` in the path.
+For absolute Windows paths, escape backslashes in JSON.
 
-## Tools Available
+## Test
 
-| Tool | Description |
-|------|-------------|
-| `search_arxiv` | Search for papers. Arguments: `topic`, `max_results` (max 300), `offset`, `category`, `sort_by`, `start_year`, `end_year`. |
-| `get_paper_fulltext` | Get the full text content of a paper. |
-| `download_pdf` | Download the PDF file. Arguments: `paper_id`, `save_dir`. |
-| `get_bibtex` | Get the BibTeX citation string. |
-| `extract_section` | Extract a specific section from the paper. |
+Local smoke tests do not contact arXiv or require extra dev dependencies:
 
-## Prompts
+```powershell
+uv run python scripts/smoke_test.py
+```
 
-- **`review_paper`**: Generates a deep review structure (Contribution, Methodology, Limitations).
-- **`compare_papers`**: Compares multiple papers' contributions and methodologies.
+Manual MCP Inspector flow:
 
-## Project Structure
+```powershell
+npx -y @modelcontextprotocol/inspector
+```
 
-- `main.py`: Entry point for the server.
-- `arxiv_insight.py`: Main MCP server implementation.
-- `paper_cache/`: Directory where parsed paper texts are cached (ignored by git).
-- `downloads/`: Default directory for downloaded PDFs (ignored by git).
-- `metadata_db.json`: Persistent storage for search history and rate limiting state (ignored by git).
+In the Inspector, configure a stdio server with command `uv` and args:
+
+```text
+--directory C:\absolute\path\to\mcp-server run main.py
+```
+
+First call `health_check`, then `search_arxiv` with a small `max_results` such
+as `3`.
+
+## Data And Security Notes
+
+- `paper_cache/`, `downloads/`, `metadata_db.json`, and `Log.txt` are local runtime artifacts.
+- `download_pdf` validates the arXiv ID and restricts writes to `downloads/`.
+- arXiv calls are rate-limited to a 3-second interval through the shared client state.
+- Tool errors are returned as text for demo readability; production servers should consider structured error output and stricter auditing.
+
+## Troubleshooting
+
+- If `uv run python scripts/smoke_test.py` cannot import dependencies, run `uv sync --frozen` first.
+- If arXiv tools fail but `health_check` works, check network connectivity and arXiv availability.
+- If PDF extraction is slow, repeat the same paper ID; cached text should be reused from `paper_cache/`.

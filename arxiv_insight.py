@@ -67,6 +67,15 @@ def extract_arxiv_refs(text: str) -> List[str]:
     found = re.findall(pattern, text)
     return list(set(found))
 
+def validate_paper_id(paper_id: str) -> str:
+    """
+    Validate and normalize arXiv IDs before using them in URLs or file paths.
+    """
+    paper_id = paper_id.strip()
+    if not re.fullmatch(r"\d{4}\.\d{4,5}(?:v\d+)?", paper_id):
+        raise ValueError("paper_id must be an arXiv ID like 2401.12345 or 2401.12345v2")
+    return paper_id
+
 def optimize_markdown(text: str) -> str:
     """
     Basic cleanup for PDF text to improve LLM readability.
@@ -119,6 +128,7 @@ def _sync_search_arxiv(query: str, max_results: int, offset: int, sort_by: str) 
 
 def _sync_get_bibtex(paper_id: str) -> str:
     """Synchronous BibTeX retrieval."""
+    paper_id = validate_paper_id(paper_id)
     # Use shared client
     search = arxiv.Search(id_list=[paper_id])
     try:
@@ -143,6 +153,23 @@ def _sync_get_bibtex(paper_id: str) -> str:
 # --- Tools ---
 
 @mcp.tool()
+def health_check() -> Dict[str, Any]:
+    """
+    Return local server health and cache status without contacting arXiv.
+    """
+    recent = state.resources.get("recent_searches", [])
+    return {
+        "status": "ok",
+        "server": "arxiv-insight",
+        "cache_dir": str(CACHE_DIR.resolve()),
+        "cache_dir_exists": CACHE_DIR.exists(),
+        "metadata_store": str(state.store_file.resolve()),
+        "metadata_store_exists": state.store_file.exists(),
+        "recent_search_count": len(recent) if isinstance(recent, list) else 0,
+        "rate_limit_delay_seconds": state.rate_limit_delay,
+    }
+
+@mcp.tool()
 async def search_arxiv(
     topic: str, 
     max_results: int = 100, 
@@ -165,6 +192,21 @@ async def search_arxiv(
         end_year: Filter by submission year (end). Set to 0 to ignore.
     """
     sys.stderr.write(f"DEBUG: search_arxiv called with topic='{topic}', category='{category}', offset={offset}, sort_by='{sort_by}', years={start_year}-{end_year}\n")
+
+    topic = topic.strip()
+    category = category.strip()
+    sort_by = sort_by.strip().lower()
+
+    if not topic:
+        return "Error searching arXiv: topic must not be empty."
+    if max_results < 1:
+        return "Error searching arXiv: max_results must be at least 1."
+    if offset < 0:
+        return "Error searching arXiv: offset must not be negative."
+    if sort_by not in {"relevance", "submitted", "updated"}:
+        return "Error searching arXiv: sort_by must be one of relevance, submitted, or updated."
+    if start_year and end_year and end_year < start_year:
+        return "Error searching arXiv: end_year must be greater than or equal to start_year."
     
     # Heuristic: If topic is a simple list of words, join with AND to enforce all keywords.
     # Also wrap in parentheses to ensure it groups correctly against other filters.
@@ -240,6 +282,7 @@ async def _get_raw_fulltext_only(paper_id: str) -> str:
     """
     Internal helper to retrieve full text without sampling/summarization.
     """
+    paper_id = validate_paper_id(paper_id)
     cache_path = CACHE_DIR / f"{paper_id}.txt"
 
     if cache_path.exists():
@@ -341,6 +384,7 @@ async def download_pdf(paper_id: str, save_dir: str = "downloads") -> str:
     # Let's allow subdirectories but validate path.
     
     try:
+        paper_id = validate_paper_id(paper_id)
         # Resolve the target directory
         target_dir = (base_dir / save_dir).resolve()
         
