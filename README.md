@@ -88,6 +88,16 @@ In the Inspector, configure a stdio server with command `uv` and args:
 First call `health_check`, then `search_arxiv` with a small `max_results` such
 as `3`.
 
+## Demo Baseline
+
+This server has been verified through the sibling `../mcp-client` Chainlit demo
+on Windows with LM Studio Local Server:
+
+- Endpoint: `http://localhost:1234/v1`
+- Model identifier: `google/gemma-4-e4b`
+- Resource shown in Chainlit: `papers://recent`
+- Successful MCP tool calls: `health_check`, then `search_arxiv`
+
 ## Data And Security Notes
 
 - `paper_cache/`, `downloads/`, `metadata_db.json`, and `Log.txt` are local runtime artifacts.
